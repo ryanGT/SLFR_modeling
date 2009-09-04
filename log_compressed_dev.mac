@@ -1,0 +1,33 @@
+Uact:matrix([1.0, 0.0, 0.0, 0.0, 0.0],[0.0, 1.0, 0.0, 0.0, Kact*tauact/(s*(s+tauact))],[0.0, 0.0, 1.0, 0.0, 0.0],[0.0, 0.0, 0.0, 1.0, 0.0],[0.0, 0.0, 0.0, 0.0, 1.0])$
+tex(Uact, "log_compressed_dev_eqs/maxeq0.tex")$
+Usp:matrix([1.0, 0.0, 0.0, 0.0, 0.0],[0.0, 1.0, 1/(ksp+csp*s), 0.0, 0.0],[0.0, 0.0, 1.0, 0.0, 0.0],[0.0, 0.0, 0.0, 1.0, 0.0],[0.0, 0.0, 0.0, 0.0, 1.0])$
+tex(Usp, "log_compressed_dev_eqs/maxeq1.tex")$
+Ubeam:matrix([c1beam, 0.5*Lbeam*c4beam/betabeam, (((-0.5)*abeam)*c3beam)/(betabeam*betabeam), ((((-0.5)*Lbeam)*abeam)*c2beam)/(betabeam**3), 0.0],[0.5*betabeam*c2beam/Lbeam, c1beam, 0.5*abeam*c4beam/betabeam/Lbeam, 0.5*abeam*c3beam/(betabeam*betabeam), 0.0],[(((-0.5)*betabeam*betabeam)*c3beam)/abeam, 0.5*betabeam*Lbeam*c2beam/abeam, c1beam, (((-0.5)*Lbeam)*c4beam)/betabeam, 0.0],[((((-0.5)*betabeam**3)*c4beam)/Lbeam)/abeam, 0.5*betabeam*betabeam*c3beam/abeam, (((-0.5)*betabeam)*c2beam)/Lbeam, c1beam, 0.0],[0.0, 0.0, 0.0, 0.0, 1.0])$
+tex(Ubeam, "log_compressed_dev_eqs/maxeq2.tex")$
+Uaccel:matrix([1.0, Laccel, 0, 0, 0.0],[0, 1.0, 0, 0, 0.0],[((-maccel)*s**2)*(Laccel-raccel), s**2*Iaccel-(maccel*s**2*raccel*(Laccel-raccel)), 1.0, -Laccel, 0.0],[maccel*s**2, maccel*s**2*raccel, 0, 1.0, 0.0],[0.0, 0.0, 0.0, 0.0, 1.0])$
+tex(Uaccel, "log_compressed_dev_eqs/maxeq3.tex")$
+Usys:Uaccel.Ubeam.Usp.Uact$
+submat:submatrix(1,2,5,Usys,1,2,5)$
+subcol:submatrix(1,2,5,Usys,1,2,3,4)$
+tex(subcol, "log_compressed_dev_eqs/maxeq4.tex")$
+nzbv_temp:invert(submat).(-1*subcol)$
+bv31:radcan(nzbv_temp[1,1])$
+bv41:radcan(nzbv_temp[2,1])$
+bv:zeromatrix(5,1)$
+bv[5,1]:1$
+bv[3,1]:bv31$
+bv[4,1]:bv41$
+U3:Uaccel.Ubeam.Usp.Uact$
+temprow:row(U3,1)$
+rb0:temprow.bv$
+U1:Usp.Uact$
+temprow:row(U1,2)$
+rb1:temprow.bv$
+bode0:rb0*s^2$
+bode0:bode0*gainbode0$
+bode0:subst([sin=zsin,cos=zcos,sinh=zsinh, cosh=zcosh],bode0)$
+with_stdout ("log_compressed_bode0.f", fortran_optimize (bode0))$
+bode1:rb1$
+bode1:bode1*gainbode1$
+bode1:subst([sin=zsin,cos=zcos,sinh=zsinh, cosh=zcosh],bode1)$
+with_stdout ("log_compressed_bode1.f", fortran_optimize (bode1))$
