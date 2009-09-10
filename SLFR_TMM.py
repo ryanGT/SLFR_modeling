@@ -21,7 +21,7 @@ import TMM.velocitysource
 reload(TMM.velocitysource)
 import TMM.feedback
 reload(TMM.feedback)
-from TMM.beam import BeamElement
+from TMM.beam import BeamElement, BeamElement_v2
 from TMM.rigid import RigidMass
 from TMM.spring import TorsionalSpringDamper
 from TMM.velocitysource import AngularVelocitySource
@@ -71,9 +71,15 @@ class SLFRBeam(BeamElement):
     def __init__(self, beamparams={'EI':EI, \
                                    'mu':mu, \
                                    'L':L}, \
+                 c=None,
                  maxsize=ms, symname='Ubeam', \
                  symlabel='beam', symsub=True, usez=True):
-        return BeamElement.__init__(self, beamparams, \
+        if c is not None:
+            beamparams['c'] = c
+            myclass = BeamElement_v2
+        else:
+            myclass = BeamElement
+        return myclass.__init__(self, beamparams, \
                                     maxsize=maxsize, \
                                     symlabel=symlabel, \
                                     symname=symname, \
@@ -193,10 +199,10 @@ class Beam_Only_Model(TMM.TMMSystem.ClampedFreeTMMSystem):
 
 
 class system_w_beam(TMM.TMMSystem.ClampedFreeTMMSystem):
-    def __init__(self, beamparams=None):
+    def __init__(self, beamparams=None, c=None):
         if beamparams is None:
             beamparams = calc_beam_props()
-        self.beam = SLFRBeam(beamparams=beamparams)
+        self.beam = SLFRBeam(beamparams=beamparams, c=c)
     
 class Beam_w_Accel_Mass(TMM.TMMSystem.ClampedFreeTMMSystem):
     def __init__(self, beamparams=None):
@@ -283,3 +289,28 @@ class SLFR_TMM_OL_model_v2(system_w_beam):
         return TMM.TMMSystem.ClampedFreeTMMSystem.__init__(self,
                                                            my_list, \
                               bodeouts=[self.bodeout1, self.bodeout2])
+
+
+class AVS_and_Beam(system_w_beam):
+    def __init__(self, K, tau, a_gain, beamparams=None, c=0.0):
+        system_w_beam.__init__(self, beamparams, c=c)
+        self.avs = AngularVelocitySource({'K':K,'tau':tau}, \
+                                         maxsize=ms, \
+                                         symname='Uact', \
+                                         symlabel='act', \
+                                         unknownparams=['K','tau'])
+        bodeout1={'input':'v', 'output':'atip', 'type':'abs', \
+                  'ind':self.beam, 'post':'accel', 'dof':0, \
+                  'gain':a_gain,'gainknown':False}        
+        bodeout2={'input':'v', 'output':'th', 'type':'abs', \
+                  'ind':self.avs, 'post':'', 'dof':1, \
+                  'gain':180.0/pi*1024.0/360.0}
+        self.bodeout1=bodeout(**bodeout1)
+        self.bodeout2=bodeout(**bodeout2)
+        my_list = [self.avs, self.beam]
+        return TMM.TMMSystem.ClampedFreeTMMSystem.__init__(self,
+                                                           my_list, \
+                              bodeouts=[self.bodeout1, self.bodeout2])
+        
+        
+    
